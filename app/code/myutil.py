@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics import roc_auc_score, precision_recall_curve, roc_curve, average_precision_score
-
+from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
 import seaborn as sns
 import gc
@@ -21,6 +21,52 @@ def get_train_test_label(row=None):
     print(test.shape)
     
     return train, test, label
+
+def cross_validation(data_, test_, y_, model):
+    folds_ = KFold(n_splits=5, shuffle=True, random_state=546789)
+    
+    oof_preds = np.zeros(data_.shape[0])
+    sub_preds = np.zeros(test_.shape[0])
+    
+    feature_importance_df = pd.DataFrame()
+    
+    feats = [f for f in data_.columns if f not in ['SK_ID_CURR']]
+    
+    for n_fold, (trn_idx, val_idx) in enumerate(folds_.split(data_)):
+        trn_x, trn_y = data_[feats].iloc[trn_idx], y_.iloc[trn_idx]
+        val_x, val_y = data_[feats].iloc[val_idx], y_.iloc[val_idx]
+        
+         # Make the new model 
+        model.init_model()
+        
+        # Train on the training data
+        model.train(trn_x, trn_y)
+
+        # Make predictions
+        # Make sure to select the second column only    
+        #print('oof_preds has shape:', oof_preds[val_idx].shape)
+        oof_preds[val_idx] = model.predict(val_x)
+        sub_preds +=  model.predict(test_[feats])/ folds_.n_splits
+        
+        fold_importance_df = pd.DataFrame()
+        fold_importance_df["feature"] = feats
+        
+        #print(fold_importance_df.shape, log_reg.coef_.shape)
+        
+        fold_importance_df["importance"] = model.get_coef()
+        fold_importance_df["fold"] = n_fold + 1
+        feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
+        #print(val_y.shape, oof_preds[val_idx].shape)
+        #print(val_y, oof_preds[val_idx])
+        print('Fold %2d AUC : %.6f' % (n_fold + 1, roc_auc_score(val_y, oof_preds[val_idx])))
+        del trn_x, trn_y, val_x, val_y
+        gc.collect()
+        
+    print('Full AUC score %.6f' % roc_auc_score(y_, oof_preds)) 
+    
+    test_['TARGET'] = sub_preds
+
+    return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def display_importances(feature_importance_df_,title):
     # Plot feature importances
