@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+import math
 from sklearn.metrics import roc_auc_score, precision_recall_curve, roc_curve, average_precision_score
 from sklearn.model_selection import KFold
 from sklearn.utils import shuffle
@@ -45,23 +45,28 @@ def cross_validation_undersample(data_, test_, y_, model):
     oof_preds = np.zeros(data_.shape[0])
     sub_preds = np.zeros(test_.shape[0])
     
-    udf = undersample(data)
+    udf = undersample(data_)
     
     feature_importance_df = pd.DataFrame()
     
     feats = [f for f in data_.columns if f not in ['SK_ID_CURR','TARGET','Unnamed: 0']]
-    
+    print('total n fold :',len(udf))
     for n_fold, u in enumerate(udf):
-        folds_ = KFold(n_splits=5, shuffle=True, random_state=546789)
-        (trn_idx, val_idx) = folds_.split(u)[0]
-        print('u shape:', u.shape)
-        label = u['TARGET']
-        trn_x = u[feats].iloc[trn_idx], 
+        
+        idx = np.arange(len(u.index))
+        np.random.shuffle(idx)
+        trn_idx = idx[0:math.floor(len(idx)*0.75)]
+        val_idx = idx[math.floor(len(idx)*0.75):len(idx)]
+        #print(trn_idx)
+        #print('u shape:', u.shape)
+        label = u['TARGET']         
+        trn_x = u[feats].iloc[trn_idx]
         trn_y = label.iloc[trn_idx]
         val_x = u[feats].iloc[val_idx]
         val_y = label.iloc[val_idx]
-        print('train_x shape:', trn_x.shape)
-        print('val_x shape:', val_x.shape)
+        #print(trn_x)
+        #print('train_x shape:', trn_x)
+        #print('val_x shape:', val_x.shape)
            
          # Make the new model 
         model.init_model()
@@ -72,7 +77,9 @@ def cross_validation_undersample(data_, test_, y_, model):
         # Make predictions
         # Make sure to select the second column only    
         #print('oof_preds has shape:', oof_preds[val_idx].shape)
-        oof_preds[val_idx] = model.predict(val_x)
+        #'Unnamed: 0' is same as the idx in the original data
+        true_val_idx = u['Unnamed: 0'].iloc[val_idx].values.flat
+        oof_preds[true_val_idx] = model.predict(val_x)
         sub_preds +=  model.predict(test_[feats])/ len(udf)
         
         fold_importance_df = pd.DataFrame()
@@ -92,7 +99,7 @@ def cross_validation_undersample(data_, test_, y_, model):
     print('Full AUC score %.6f' % roc_auc_score(y_, oof_preds)) 
     
     test_['TARGET'] = sub_preds
-    test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission.csv'.format(model), index=False, float_format='%.8f')
+    #test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission_undersample.csv'.format(model), index=False, float_format='%.8f')
     return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def cross_validation(data_, test_, y_, model):
@@ -138,7 +145,7 @@ def cross_validation(data_, test_, y_, model):
     print('Full AUC score %.6f' % roc_auc_score(y_, oof_preds)) 
     
     test_['TARGET'] = sub_preds
-    test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission_undersample.csv'.format(model), index=False, float_format='%.8f')
+    #test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission_undersample.csv'.format(model), index=False, float_format='%.8f')
     return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def display_importances(feature_importance_df_,title):
