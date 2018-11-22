@@ -12,14 +12,14 @@ def get_train_test_label(row=None):
     train = pd.read_csv("main_table.csv", nrows = row)
     test = pd.read_csv("test_table.csv", nrows = row)
     label = train['TARGET']
-    train = train.drop(columns=['TARGET','Unnamed: 0'])
-    test = test.drop(columns=['TARGET','Unnamed: 0'])
+    #train = train.drop(columns=['TARGET','Unnamed: 0'])
+    #test = test.drop(columns=['TARGET','Unnamed: 0'])
     #train = train.iloc[:,0:-50]
     #test = test.iloc[:,0:-50]
     #feats = [f for f in test.columns if f not in train.columns]
     #print(feats)
-    print(train.shape)
-    print(test.shape)
+    print('train datasset shape:',train.shape)
+    print('test datasset shape:',test.shape)
     
     return train, test, label
 
@@ -39,6 +39,52 @@ def undersample(df):
         undersampled_list.append(shuffle(undersampled_df).reset_index(drop=True))
     return undersampled_list
 
+def cross_validation_undersampler(data_, test_, y_, model):
+    #folds_ = KFold(n_splits=5, shuffle=True, random_state=546789)
+    
+    oof_preds = np.zeros(data_.shape[0])
+    sub_preds = np.zeros(test_.shape[0])
+    
+    feature_importance_df = pd.DataFrame()
+    
+    feats = [f for f in data_.columns if f not in ['SK_ID_CURR','TARGET','Unnamed: 0']]
+    
+    for n_fold, (trn_idx, val_idx) in enumerate(folds_.split(data_)):
+        trn_x, trn_y = data_[feats].iloc[trn_idx], y_.iloc[trn_idx]
+        val_x, val_y = data_[feats].iloc[val_idx], y_.iloc[val_idx]
+        
+         # Make the new model 
+        model.init_model()
+        
+        # Train on the training data
+        model.train(trn_x, trn_y)
+
+        # Make predictions
+        # Make sure to select the second column only    
+        #print('oof_preds has shape:', oof_preds[val_idx].shape)
+        oof_preds[val_idx] = model.predict(val_x)
+        sub_preds +=  model.predict(test_[feats])/ folds_.n_splits
+        
+        fold_importance_df = pd.DataFrame()
+        fold_importance_df["feature"] = feats
+        
+        #print(fold_importance_df.shape, log_reg.coef_.shape)
+        
+        fold_importance_df["importance"] = model.get_coef()
+        fold_importance_df["fold"] = n_fold + 1
+        feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
+        #print(val_y.shape, oof_preds[val_idx].shape)
+        #print(val_y, oof_preds[val_idx])
+        print('Fold %2d AUC : %.6f' % (n_fold + 1, roc_auc_score(val_y, oof_preds[val_idx])))
+        del trn_x, trn_y, val_x, val_y
+        gc.collect()
+        
+    print('Full AUC score %.6f' % roc_auc_score(y_, oof_preds)) 
+    
+    test_['TARGET'] = sub_preds
+    test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission.csv'.format(model), index=False, float_format='%.8f')
+    return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
+
 def cross_validation(data_, test_, y_, model):
     folds_ = KFold(n_splits=5, shuffle=True, random_state=546789)
     
@@ -47,7 +93,7 @@ def cross_validation(data_, test_, y_, model):
     
     feature_importance_df = pd.DataFrame()
     
-    feats = [f for f in data_.columns if f not in ['SK_ID_CURR']]
+    feats = [f for f in data_.columns if f not in ['SK_ID_CURR','TARGET','Unnamed: 0']]
     
     for n_fold, (trn_idx, val_idx) in enumerate(folds_.split(data_)):
         trn_x, trn_y = data_[feats].iloc[trn_idx], y_.iloc[trn_idx]
