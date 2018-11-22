@@ -82,7 +82,7 @@ def cross_validation(data_, test_, y_, model):
     print('Full AUC score %.6f' % roc_auc_score(y_, oof_preds)) 
     
     test_['TARGET'] = sub_preds
-
+    test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission.csv'.format(model), index=False, float_format='%.8f')
     return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def display_importances(feature_importance_df_,title):
