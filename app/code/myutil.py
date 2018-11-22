@@ -3,6 +3,7 @@ import numpy as np
 
 from sklearn.metrics import roc_auc_score, precision_recall_curve, roc_curve, average_precision_score
 from sklearn.model_selection import KFold
+from sklearn.utils import shuffle
 import matplotlib.pyplot as plt
 import seaborn as sns
 import gc
@@ -21,6 +22,22 @@ def get_train_test_label(row=None):
     print(test.shape)
     
     return train, test, label
+
+# undersample without replacement, return a list of undersampled df
+def undersample(df):
+    pos = df[df.TARGET == 1]
+    neg = df[df.TARGET == 0]
+    shuffled_neg = shuffle(neg)
+
+    neg_list = []
+    for i in range(len(neg) // len(pos)):
+        neg_list.append(shuffled_neg[i*len(pos):(i+1)*len(pos)])
+
+    undersampled_list = []
+    for neg_df in neg_list:
+        undersampled_df = neg_df.append(pos, ignore_index=True)
+        undersampled_list.append(shuffle(undersampled_df).reset_index(drop=True))
+    return undersampled_list
 
 def cross_validation(data_, test_, y_, model):
     folds_ = KFold(n_splits=5, shuffle=True, random_state=546789)
