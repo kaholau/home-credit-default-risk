@@ -12,8 +12,14 @@ from sklearn.utils import shuffle
 import matplotlib.pyplot as plt
 import seaborn as sns
 import gc
+
 import warnings
 warnings.filterwarnings('ignore')
+
+def my_print(str):
+    with open('output.txt', 'a') as file:
+        file.write(str)
+    return
 
 def get_train_test_label(row=None):
     train = pd.read_csv("main_table.csv", nrows = row)
@@ -46,7 +52,7 @@ def feature_select_cross_validation_undersample(feature_importance_df_, data_, t
     itr_num = int(math.floor(len(cols_all)/50))
     print("number of iteration:", itr_num)
     
-    for i in range(itr_num):
+    for i in range(1,itr_num+1):
         cols = cols_all[:(i*50)]
         data_sf = data_[cols]
         data_sf[['TARGET','Unnamed: 0']] = data_[['TARGET','Unnamed: 0']]
@@ -55,9 +61,28 @@ def feature_select_cross_validation_undersample(feature_importance_df_, data_, t
         oof_preds, test_preds, importances, folds = cross_validation_undersample(data_sf, test_, y_, model)
         test_preds.to_csv('{}_{}_submission_undersample.csv'.format(str(model),i), index=False)
 
+def feature_select_cross_validation(feature_importance_df_, data_, test_, y_, model):
+    cols_all = feature_importance_df_[["feature", "importance"]].groupby("feature").mean().sort_values(
+            by="importance", ascending=False).index
+    
+    itr_num = int(math.floor(len(cols_all)/50))
+    print("number of iteration:", itr_num)
+    
+    for i in range(1,itr_num+1):
+        cols = cols_all[:(i*50)]
+        data_sf = data_[cols]
+        data_sf[['TARGET','Unnamed: 0']] = data_[['TARGET','Unnamed: 0']]
+#         print(i," selected index:",cols)
+        print(i)
+        my_print(i)
+        oof_preds, test_preds, importances, folds = cross_validation(data_sf, test_, y_, model)
+        test_preds.to_csv('{}_{}_submission.csv'.format(str(model),i), index=False)
+        
+        
 def cross_validation_undersample(data_, test_, y_, model):
-    
-    
+    from datetime import datetime
+    start_time = datetime.now()    
+    print('start at: {}'.format(start_time))
     oof_preds = np.zeros(data_.shape[0])
     sub_preds = np.zeros(test_.shape[0])
     
@@ -116,9 +141,14 @@ def cross_validation_undersample(data_, test_, y_, model):
     
     test_['TARGET'] = sub_preds
     #test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission_undersample.csv'.format(model), index=False, float_format='%.8f')
+    end_time = datetime.now()
+    print('Duration: {}'.format(end_time - start_time))
     return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def cross_validation(data_, test_, y_, model):
+    from datetime import datetime
+    start_time = datetime.now()
+    print('start at: {}'.format(start_time))
     folds_ = KFold(n_splits=5, shuffle=True, random_state=546789)
     
     oof_preds = np.zeros(data_.shape[0])
@@ -154,14 +184,20 @@ def cross_validation(data_, test_, y_, model):
         feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
         #print(val_y.shape, oof_preds[val_idx].shape)
         #print(val_y, oof_preds[val_idx])
-        print('Fold %2d AUC : %.6f' % (n_fold + 1, roc_auc_score(val_y, oof_preds[val_idx])))
+        result_str = 'Fold %2d AUC : %.6f' % (n_fold + 1, roc_auc_score(val_y, oof_preds[val_idx]))
+        print(result_str)
+        my_print(result_str)
         del trn_x, trn_y, val_x, val_y
         gc.collect()
-        
-    print('Full AUC score %.6f' % roc_auc_score(y_, oof_preds)) 
+    result_str = 'Full AUC score %.6f' % roc_auc_score(y_, oof_preds)
+    print(result_str) 
+    my_print(result_str)
     
     test_['TARGET'] = sub_preds
     #test_[['SK_ID_CURR', 'TARGET']].to_csv('{}_submission_undersample.csv'.format(model), index=False, float_format='%.8f')
+    
+    end_time = datetime.now()
+    print('Duration: {}'.format(end_time - start_time))
     return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def display_importances(feature_importance_df_,title):
@@ -241,56 +277,12 @@ def report(test_preds, folds, importances, data, y, oof_preds, title, is_with_nf
     display_roc_curve(y, oof_preds, folds_idx, title, is_with_nfold)
     display_precision_recall(y, oof_preds, folds_idx, title, is_with_nfold)
     
-    
-# def opt(features, data_):
-#     random.seed(time.clock())
-    
-#     def lgb_evaluate(num_leaves, feature_fraction, bagging_fraction, max_depth, lambda_l1, lambda_l2, min_split_gain, min_child_weight):
-#         params = {'application':'binary', 'early_stopping_round':100, 'metric':'auc', 'n_estimators':10000, 'nthread' : 6}
-#         params["num_leaves"] = int(round(num_leaves))
-#         params['feature_fraction'] = max(min(feature_fraction, 1), 0)
-#         params['bagging_fraction'] = max(min(bagging_fraction, 1), 0)
-#         params['max_depth'] = int(round(max_depth))
-#         params['lambda_l1'] = max(lambda_l1, 0)
-#         params['lambda_l2'] = max(lambda_l2, 0)
-#         params['min_split_gain'] = min_split_gain
-#         params['min_child_weight'] = min_child_weight        
-        
-#         us_df = undersample(data_)[0]
-#         print('us_df.shape: ',us_df.shape)
-#         #categorical_feats = us_df.columns[input_df.dtypes == 'object']
-#         train_data = lgb.Dataset(data=us_df[features], label=us_df['TARGET'], free_raw_data=False)
-#         random_seed = random.randint(1,100)
-#         cv_result = lgb.cv(params, train_data, nfold=5, seed=random_seed, stratified=True, verbose_eval =200, metrics=['auc'])
-#         print(cv_result)
-#         return cv_result
-
-#     def bayesOpt(data_):
-#         params = {'num_leaves': (24, 45),
-#                 'feature_fraction': (0.1, 0.9),
-#                 'bagging_fraction': (0.8, 1),
-#                 'max_depth': (5, 8.99),
-#                 'lambda_l1': (0, 5),
-#                 'lambda_l2': (0, 3),
-#                 'min_split_gain': (0.001, 0.1),
-#                 'min_child_weight': (5, 50)}
-        
-#         lgbBO = BayesianOptimization(lgb_evaluate, params)
-
-
-#         lgbBO.maximize(init_points=5, n_iter=5)
-#         best = lgbBO.res['max']
-#         print(best)
-#         return best
-
-
-#     return bayesOpt(data_)
 def opt(features, data_):
     random.seed(time.clock())
-    def bayes_parameter_opt_lgb(data, init_round=15, opt_round=25, n_estimators=10000, learning_rate=0.05, output_process=False):
+    def bayes_parameter_opt_lgb(data, init_round, opt_round, n_estimators, learning_rate, output_process=False):
         
         # parameters
-        def lgb_eval(num_leaves, feature_fraction, bagging_fraction, max_depth, lambda_l1, lambda_l2, min_split_gain, min_child_weight):
+        def lgb_eval(num_leaves, feature_fraction, bagging_fraction, max_depth, lambda_l1, lambda_l2, min_split_gain, min_child_weight,bagging_freq):
             params = {'application':'binary','num_iterations': n_estimators, 'learning_rate':learning_rate, 'early_stopping_round':100, 'metric':'auc'}
             params["num_leaves"] = int(round(num_leaves))
             params['feature_fraction'] = max(min(feature_fraction, 1), 0)
@@ -300,9 +292,18 @@ def opt(features, data_):
             params['lambda_l2'] = max(lambda_l2, 0)
             params['min_split_gain'] = min_split_gain
             params['min_child_weight'] = min_child_weight
+            params['bagging_freq'] = int(round(bagging_freq))
+            us_df = data
+#             us_df = undersample(data)
+#             idx1 = random.randint(0,len(us_df)-1)
+#             us_df1 = us_df[idx1]
+#             idx2 = random.randint(0,len(us_df)-1)
+#             while idx1 == idx2:
+#                 idx2 = random.randint(0,len(us_df)-1)
+#             us_df2 = us_df[idx2]
+#             us_df = pd.concat([us_df1, us_df2])
             
-            us_df = undersample(data)[0]
-            print('us_df.shape: ',us_df.shape)
+            #print('us_df.shape: ',us_df.shape)
             #categorical_feats = us_df.columns[input_df.dtypes == 'object']
             train_data = lgb.Dataset(data=us_df[features], label=us_df['TARGET'], free_raw_data=False)
             random_seed = random.randint(1,100)
@@ -310,9 +311,11 @@ def opt(features, data_):
             cv_result = lgb.cv(params, train_data, nfold=3, seed=random_seed, stratified=True, verbose_eval =200, metrics=['auc'])
             return max(cv_result['auc-mean'])
         # range 
-        lgbBO = BayesianOptimization(lgb_eval, {'num_leaves': (24, 45),
+#         {'boosting_type': 'gbdt', 'class_weight': None, 'colsample_bytree': 1.0, 'importance_type': 'split', 'learning_rate': 0.1, 'max_depth': -1, 'min_child_samples': 20, 'min_child_weight': 0.001, 'min_split_gain': 0.0, 'n_estimators': 100, 'n_jobs': -1, 'num_leaves': 31, 'objective': None, 'random_state': None, 'reg_alpha': 0.0, 'reg_lambda': 0.0, 'silent': True, 'subsample': 1.0, 'subsample_for_bin': 200000, 'subsample_freq': 0}
+        lgbBO = BayesianOptimization(lgb_eval, {'num_leaves': (23, 39),
                                                 'feature_fraction': (0.1, 0.9),
                                                 'bagging_fraction': (0.8, 1),
+                                                'bagging_freq':(1,10),
                                                 'max_depth': (5, 8.99),
                                                 'lambda_l1': (0, 5),
                                                 'lambda_l2': (0, 3),
@@ -322,12 +325,12 @@ def opt(features, data_):
         lgbBO.maximize(init_points=init_round, n_iter=opt_round)
 
         # output optimization process
-        if output_process==True: lgbBO.points_to_csv("bayes_opt_result.csv")
+        if output_process==True: lgbBO.points_to_csv("bayes_opt_result_{}.csv".format(time.clock()))
 
         # return best parameters
-        return lgbBO.res['max']['max_params']
+        return lgbBO
 
-    opt_params = bayes_parameter_opt_lgb(data_, init_round=5, opt_round=10, n_estimators=100, learning_rate=0.05)
+    opt_params = bayes_parameter_opt_lgb(data_, init_round=5, opt_round=10, n_estimators=10000, learning_rate=0.05, output_process=True)
 
 
 
