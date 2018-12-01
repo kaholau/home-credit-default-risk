@@ -16,6 +16,8 @@ import gc
 import warnings
 warnings.filterwarnings('ignore')
 
+
+
 def get_train_test_label(row=None):
     '''
     This function return the preprocessed data and label and kaggle test result
@@ -86,7 +88,6 @@ def feature_select_cross_validation(feature_importance_df_, data_, test_, y_, mo
         
         
 def cross_validation_undersample(data_, test_, y_, model):
-    
     from datetime import datetime
     start_time = datetime.now()    
     
@@ -156,6 +157,9 @@ def cross_validation_undersample(data_, test_, y_, model):
     return oof_preds, test_[['SK_ID_CURR', 'TARGET']], feature_importance_df, folds_
 
 def cross_validation(data_, test_, y_, model):
+    '''
+    modify base on https://www.kaggle.com/ogrellier/good-fun-with-ligthgbm/code#L294
+    '''
     from datetime import datetime
     start_time = datetime.now()
     print('start at: {}'.format(start_time))
@@ -215,6 +219,7 @@ def cross_validation(data_, test_, y_, model):
 def display_importances(feature_importance_df_,title):
     '''
     plot the bar chart of feature importance
+    #ref: https://www.kaggle.com/ogrellier/good-fun-with-ligthgbm/code#L294
     '''
     #average the importance obtained from cross validation and sort and select the top 50
     cols = feature_importance_df_[["feature", "importance"]].groupby("feature").mean().sort_values(
@@ -228,6 +233,7 @@ def display_importances(feature_importance_df_,title):
 def display_roc_curve(y_, oof_preds_, folds_idx_,title, is_with_nfold):
     '''
     Plot ROC curves
+    #ref: https://www.kaggle.com/ogrellier/good-fun-with-ligthgbm/code#L294
     '''
     plt.figure(figsize=(6,6))
     scores = [] 
@@ -257,7 +263,10 @@ def display_roc_curve(y_, oof_preds_, folds_idx_,title, is_with_nfold):
     plt.savefig('{}_roc_curve.png'.format(title))
     
 def display_precision_recall(y_, oof_preds_, folds_idx_, title, is_with_nfold):
-    # Plot precision and recall curves
+    '''
+    Plot precision and recall curves
+    modify base on https://www.kaggle.com/ogrellier/good-fun-with-ligthgbm/code#L294
+    '''
     plt.figure(figsize=(6,6))
     
     scores = [] 
@@ -300,6 +309,7 @@ def report(test_preds, folds, importances, data, y, oof_preds, title, is_with_nf
 def opt(features, data_):
     '''
     calling bayesian optimization
+    modify base on https://www.kaggle.com/c/home-credit-default-risk/kernels
     '''
     #init random
     random.seed(time.clock())
