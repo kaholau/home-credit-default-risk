@@ -37,7 +37,7 @@ tornado==5.1.1
 tqdm==4.28.1
 traitlets==4.3.2
 Unidecode==1.0.22
-urllib3==1.22
+urllib3==1.24.2
 wcwidth==0.1.7
 backcall==0.1.0
 bleach==3.0.2
@@ -95,7 +95,7 @@ tornado==5.1.1
 tqdm==4.28.1
 traitlets==4.3.2
 Unidecode==1.0.22
-urllib3==1.22
+urllib3==1.24.2
 wcwidth==0.1.7
 webencodings==0.5.1
 backcall==0.1.0
@@ -154,7 +154,7 @@ tornado==5.1.1
 tqdm==4.28.1
 traitlets==4.3.2
 Unidecode==1.0.22
-urllib3==1.22
+urllib3==1.24.2
 wcwidth==0.1.7
 webencodings==0.5.1
 xgboost==0.81
