@@ -74,7 +74,7 @@ pexpect==4.6.0
 pickleshare==0.7.5
 prometheus-client==0.4.2
 prompt-toolkit==2.0.7
-psutil==5.4.8
+psutil==5.6.6
 ptyprocess==0.6.0
 Pygments==2.2.0
 pyparsing==2.3.0
@@ -133,7 +133,7 @@ pexpect==4.6.0
 pickleshare==0.7.5
 prometheus-client==0.4.2
 prompt-toolkit==2.0.7
-psutil==5.4.8
+psutil==5.6.6
 ptyprocess==0.6.0
 Pygments==2.2.0
 pyparsing==2.3.0
