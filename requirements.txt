@@ -40,7 +40,7 @@ Unidecode==1.0.22
 urllib3==1.22
 wcwidth==0.1.7
 backcall==0.1.0
-bleach==3.0.2
+bleach==3.1.4
 certifi==2018.10.15
 chardet==3.0.4
 cycler==0.10.0
@@ -99,7 +99,7 @@ urllib3==1.22
 wcwidth==0.1.7
 webencodings==0.5.1
 backcall==0.1.0
-bleach==3.0.2
+bleach==3.1.4
 certifi==2018.10.15
 chardet==3.0.4
 cycler==0.10.0
